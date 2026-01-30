@@ -1,0 +1,43 @@
+# Website Blocker - Default List
+# Tambahkan website tanpa www, satu per baris
+# Gunakan # untuk komentar
+
+# Social Media
+facebook.com
+instagram.com
+tiktok.com
+twitter.com
+x.com
+linkedin.com
+pinterest.com
+reddit.com
+quora.com
+
+# E-Commerce Indonesia
+shopee.co.id
+tokopedia.com
+lazada.co.id
+bukalapak.com
+blibli.com
+jd.id
+
+# Gaming
+roblox.com
+epicgames.com
+steampowered.com
+discord.com
+
+# Streaming
+youtube.com
+netflix.com
+spotify.com
+twitch.tv
+disneyplus.com
+primevideo.com
+
+# News Indonesia
+detik.com
+kompas.com
+tribunnews.com
+liputan6.com
+okezone.com
