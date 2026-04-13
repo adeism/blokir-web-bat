@@ -1,6 +1,7 @@
 @echo off
-Title Unblock All Websites - Restore
+Title Website Unblock - All Clear
 color 0a
+setlocal enabledelayedexpansion
 
 REM Auto-elevate to Administrator
 net session >nul 2>&1
@@ -16,89 +17,62 @@ set backupdir=%scriptdir%backups
 set logdir=%scriptdir%logs
 
 cls
-echo ========================================
-echo   RESTORE HOSTS FILE
-echo ========================================
+echo.
+echo  ================================
+echo    BUKA SEMUA BLOKIR WEBSITE
+echo  ================================
 echo.
 
-REM Check if backup directory exists
-if not exist "%backupdir%" (
-    echo Folder backup tidak ditemukan!
-    echo Tidak ada backup yang tersedia untuk restore.
+REM Hitung berapa yang diblokir
+set blockcount=0
+for /f %%a in ('findstr /c:"127.0.0.1" "%hostspath%" ^| findstr /v "localhost" ^| find /c /v ""') do set blockcount=%%a
+
+if %blockcount%==0 (
+    echo  Tidak ada blokir aktif saat ini.
     pause
     exit
 )
 
-REM Find latest backup
-set latestBackup=
-for /f "delims=" %%a in ('dir /b /o-d "%backupdir%\*.bak" 2^>nul') do (
-    if not defined latestBackup set latestBackup=%%a
+echo  Ditemukan %blockcount% entri blokir.
+echo.
+set /p confirm="  Hapus semua? (y/n): "
+if /i not "%confirm%"=="y" (
+    echo  Dibatalkan.
+    pause
+    exit
 )
 
-if not defined latestBackup (
-    echo Tidak ada file backup yang ditemukan!
-    echo.
-    echo Opsi:
-    echo 1. Buat hosts file baru (default Windows)
-    echo 2. Keluar
-    echo.
-    set /p choice="Pilihan (1-2): "
-    
-    if "!choice!"=="1" (
-        echo # Copyright (c) 1993-2009 Microsoft Corp. > "%hostspath%"
-        echo # >> "%hostspath%"
-        echo # This is a sample HOSTS file used by Microsoft TCP/IP for Windows. >> "%hostspath%"
-        echo # >> "%hostspath%"
-        echo 127.0.0.1       localhost >> "%hostspath%"
-        echo ::1             localhost >> "%hostspath%"
-        
-        echo.
-        echo Hosts file default telah dibuat.
-        ipconfig /flushdns >nul
-        echo Cache DNS dibersihkan.
-        
-        if exist "%logdir%\block_log.txt" (
-            echo [%date% %time%] RESTORE: Created default hosts file >> "%logdir%\block_log.txt"
-        )
+REM Backup dulu
+if not exist "%backupdir%" mkdir "%backupdir%"
+for /f "tokens=2 delims==" %%a in ('wmic os get localdatetime /value') do set dt=%%a
+set timestamp=%dt:~0,8%_%dt:~8,6%
+copy /Y "%hostspath%" "%backupdir%\hosts_%timestamp%.bak" >nul
+echo  Backup dibuat.
+
+REM Hapus semua baris 127.0.0.1 kecuali localhost
+type nul > "%hostspath%.tmp"
+for /f "usebackq tokens=*" %%a in ("%hostspath%") do (
+    set line=%%a
+    echo !line! | findstr /r "^127.0.0.1" >nul
+    if errorlevel 1 (
+        echo %%a >> "%hostspath%.tmp"
+    ) else (
+        echo !line! | findstr /i "localhost" >nul
+        if not errorlevel 1 echo %%a >> "%hostspath%.tmp"
     )
-    
-    pause
-    exit
 )
+move /Y "%hostspath%.tmp" "%hostspath%" >nul
 
-echo File backup terbaru ditemukan: %latestBackup%
-echo.
-set /p confirm="Restore dari backup ini? (Y/N): "
+REM Flush DNS
+ipconfig /flushdns >nul
 
-if /i "%confirm%" NEQ "Y" (
-    echo.
-    echo Restore dibatalkan.
-    pause
-    exit
-)
+REM Log
+if not exist "%logdir%" mkdir "%logdir%"
+echo [%date% %time%] UNBLOCK_ALL: Removed %blockcount% entries >> "%logdir%\block_log.txt"
 
 echo.
-echo Mengembalikan hosts file dari backup...
-copy /Y "%backupdir%\%latestBackup%" "%hostspath%" >nul
-
-if %errorLevel% EQU 0 (
-    echo Berhasil! Hosts file telah dikembalikan.
-    echo.
-    echo Membersihkan cache DNS...
-    ipconfig /flushdns >nul
-    echo Cache DNS dibersihkan.
-    
-    if not exist "%logdir%" mkdir "%logdir%"
-    echo [%date% %time%] RESTORE: Restored from %latestBackup% >> "%logdir%\block_log.txt"
-    
-    echo.
-    echo Website sudah bisa diakses kembali!
-    echo Silakan restart browser Anda.
-) else (
-    echo.
-    echo Gagal mengembalikan hosts file!
-    echo Periksa hak akses Administrator.
-)
-
+echo  Selesai! Semua %blockcount% blokir dihapus.
+echo  Cache DNS sudah dibersihkan.
 echo.
 pause
+exit
